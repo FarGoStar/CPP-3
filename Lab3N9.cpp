@@ -1,4 +1,4 @@
-﻿
+
 
 /* Задача №9
 Справочник деканата
@@ -8,20 +8,13 @@
 #include <string>
 #include <algorithm>
 #include <Windows.h>
-#include "IsGroup.h"
-#include "IsCourse.h"
-#include "IsCreditNum.h"
-#include "IsFindStudentInfo.h"
 #include "StudentInfoList.h"
-#include "IsSurname.h"
-#include "IsMark.h"
-#include "IsDisc.h"
-#include "IsFindForAvg.h"
-#include "MyDeanery.h"
+
 
 using namespace std;
 
-
+typedef StudentInfoList<Elem>::Predicate Predicate;
+typedef StudentInfoList<Elem> Students;
 void menu()
 {
 	cout << "1 — Зачислить студента" << endl;
@@ -53,10 +46,9 @@ int main()
 {
 	SetConsoleCP(1251);
 	SetConsoleOutputCP(1251);
-	MyDeanery deanery = MyDeanery();
-	deanery.Deserialize();
+	Students stud,helpstud;
+	stud.Deserialize();
 	bool control = true, control2 = true, control3 = true;
-	StudentInfoList list;
 	int _course;
 	int _group;
 	string _surname;
@@ -73,20 +65,20 @@ int main()
 
 		switch (tmp) {
 		case '1':
-			deanery.AddStudent();
-			deanery.Serialize();
+			stud.AddStudentInfo();
+			stud.Serialize();
 			break;
 
 		case '2':
 			cout << "Введите номер зачетной книжки для изменения данных: ";  cin >> _creditNum; cout << endl;
-			deanery.ChangeStudentInfo(_creditNum);
-			deanery.Serialize();
+			stud.Find([_creditNum](const Elem& e) {return e.creditNum == _creditNum; });
+			stud.Serialize();
 			break;
 
 		case '3':
 			cout << "Введите номер зачетной книжки отчисляемого студента: ";  cin >> _creditNum; cout << endl;
-			deanery.DeleteStudent(_creditNum);
-			deanery.Serialize();
+			stud.remove_if([_creditNum](const Elem& e) {return e.creditNum == _creditNum; });
+			stud.Serialize();
 			cout << "Студент удален из справочника." << endl;
 			break;
 		case '4':
@@ -99,20 +91,20 @@ int main()
 				{
 				case '1':
 					cout << "Курс: "; cin >> _course;
-					deanery.FindCourse(_course);
+					helpstud = stud.select([_course](const Elem& e) {return e.course == _course; });
 					break;
 
 				case '2':
 					cout << "Номер группы: "; cin >> _group;
-					deanery.FindGroup(_group);
+					helpstud = stud.select([_group](const Elem& e) {return e.group == _group; });
 					break;
 				case '3':
 					cout << "Фамилия: "; cin >> _surname;
-					deanery.FindSurname(_surname);
+					helpstud = stud.select([_surname](const Elem& e) {return e.surname == _surname; });
 					break;
 				case '4':
 					cout << "Номер зачетной книжки: "; cin >> _creditNum;
-					deanery.FindCredit(_creditNum);
+					helpstud = stud.select([_creditNum](const Elem& e) {return e.creditNum == _creditNum; });
 					break;
 				case '0':
 					control2 = false;
@@ -129,13 +121,25 @@ int main()
 						cin >> tmp3;
 						switch (tmp3)
 						{
-						case '1': deanery.FindExcellent();
+						case '1': helpstud.select([](const Elem& e)
+							{
+								for (int i = 0; i < 5; i++)
+								{
+									if (e.marks[i] != 5) return false;
+								};
+								return true;
+							});
 							break;
 						case '2': cout << "Введите минимум для среднего балла по результатам сессии" << endl;
 							cin >> min;
 							cout << "Введите максимум для среднего балла по результатам сессии" << endl;
 							cin >> max;
-							deanery.FindAvg(min, max);
+							helpstud.select([min, max](const Elem& e) {double sum = 0; for (int i = 0; i < 5; i++)
+																						{
+																							sum += e.marks[i];
+																						};
+																						if (((sum / 5) < max) && ((sum / 5) > min)) return true;
+																						else return false;});
 							break;
 						case '0': control3 = false;
 							break;
@@ -145,7 +149,6 @@ int main()
 		case '0':
 			control = false;
 			break;
-
 			}
 		}
 
